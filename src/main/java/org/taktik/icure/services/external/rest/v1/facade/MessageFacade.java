@@ -288,11 +288,19 @@ public class MessageFacade implements OpenApiFacade{
 	)
 	@GET
 	@Path("/byTransportGuid")
-	public Response findMessagesByTransportGuid(@QueryParam("transportGuid") String transportGuid, @QueryParam("received") Boolean received, @QueryParam("startKey") String startKey,
-												@QueryParam("startDocumentId") String startDocumentId, @QueryParam("limit") Integer limit) throws LoginException {
+	public Response findMessagesByTransportGuid(@QueryParam("transportGuid") String transportGuid, @QueryParam("received") Boolean received,
+                                                @QueryParam("fromDate") Long fromDate, @QueryParam("toDate") Long toDate,
+                                                @QueryParam("startKey") String startKey, @QueryParam("startDocumentId") String startDocumentId,
+                                                @QueryParam("limit") Integer limit) throws LoginException {
 		Response response;
 
 		boolean receivedPrimitive = (received != null ? received : false);
+
+		boolean hasDates = (fromDate != null && toDate != null);
+
+		if(hasDates && receivedPrimitive){
+		    return ResponseUtils.badRequest("Cannot use dates on received messages");
+        }
 
 		ArrayList<Object> startKeyList = null;
 		if (startKey != null && startKey.length() > 0) {
@@ -305,7 +313,11 @@ public class MessageFacade implements OpenApiFacade{
 		if(receivedPrimitive){
             messages = messageLogic.findByTransportGuidReceived(sessionLogic.getCurrentSessionContext().getUser().getHealthcarePartyId(), transportGuid, paginationOffset);
         } else {
-            messages = messageLogic.findByTransportGuid(sessionLogic.getCurrentSessionContext().getUser().getHealthcarePartyId(), transportGuid, paginationOffset);
+            if (hasDates) {
+                messages = messageLogic.findByTransportGuidSentDate(sessionLogic.getCurrentSessionContext().getUser().getHealthcarePartyId(), transportGuid, fromDate, toDate, paginationOffset);
+            } else {
+                messages = messageLogic.findByTransportGuid(sessionLogic.getCurrentSessionContext().getUser().getHealthcarePartyId(), transportGuid, paginationOffset);
+            }
         }
 
 		if (messages != null) {
