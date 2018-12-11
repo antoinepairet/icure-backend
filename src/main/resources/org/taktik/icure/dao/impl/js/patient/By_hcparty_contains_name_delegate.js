@@ -39,7 +39,7 @@ map = function(doc) {
         if (doc.lastName || doc.firstName) {
             if (doc.delegations) {
                 Object.keys(doc.delegations).forEach(function (k) {
-                    emit_normalized_substrings(k, (doc.lastName ? doc.lastName : "") + (doc.firstName ? doc.firstName : ""), doc, latin_map);
+                    emit_normalized_substrings(k, (doc.lastName ? doc.lastName : "") + (doc.firstName ? doc.firstName.split(" ")[0] : ""), doc, latin_map);
                 });
             }
         }
