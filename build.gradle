@@ -196,7 +196,10 @@ dependencies {
     // mustache
     compile group: 'com.github.spullara.mustache.java', name: 'compiler', version: '0.9.5'
 
-	// Runtime
+    // Moxy for JABX JSON
+    compile group: 'org.eclipse.persistence', name: 'eclipselink', version: '2.7.0'
+
+    // Runtime
 	runtime group: 'org.javassist', name: 'javassist', version: '3.18.1-GA'
 
 	testCompile('org.springframework.boot:spring-boot-starter-test')

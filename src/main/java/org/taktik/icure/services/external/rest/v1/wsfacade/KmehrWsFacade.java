@@ -55,12 +55,12 @@ public class KmehrWsFacade {
 
 	@Path("/generateSumehr")
 	@WebSocketOperation(adapterClass = KmehrFileOperation.class)
-	public void generateSumehr(@WebSocketParam("patientId") String patientId, @WebSocketParam("language") String language, @WebSocketParam("info") SumehrExportInfoDto info, KmehrFileOperation operation) throws IOException {
+	public void generateSumehr(@WebSocketParam("patientId") String patientId, @WebSocketParam("language") String language, @WebSocketParam("jsonFormat") Boolean jsonFormat, @WebSocketParam("info") SumehrExportInfoDto info, KmehrFileOperation operation) throws IOException {
 		ByteArrayOutputStream bos = new ByteArrayOutputStream(10000);
 		try {
 			sumehrLogic.createSumehr(bos, patientLogic.getPatient(patientId), info.getSecretForeignKeys(),
-					healthcarePartyLogic.getHealthcareParty(sessionLogic.getCurrentSessionContext().getUser().getHealthcarePartyId()),
-					mapper.map(info.getRecipient(), HealthcareParty.class), language, info.getComment(), operation);
+                    healthcarePartyLogic.getHealthcareParty(sessionLogic.getCurrentSessionContext().getUser().getHealthcarePartyId()),
+                    mapper.map(info.getRecipient(), HealthcareParty.class), language, info.getComment(), operation, jsonFormat);
 			operation.binaryResponse(ByteBuffer.wrap(bos.toByteArray()));
 			bos.close();
 		} catch (Exception e) {

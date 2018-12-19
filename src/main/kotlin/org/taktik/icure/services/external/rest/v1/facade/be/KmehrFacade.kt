@@ -65,8 +65,8 @@ class KmehrFacade(val mapper: MapperFacade, val sessionLogic: SessionLogic, val 
     @POST
     @Path("/sumehr/{patientId}/export")
     @Produces("application/octet-stream")
-    fun generateSumehr(@PathParam("patientId") patientId: String, @QueryParam("language") language: String, info: SumehrExportInfoDto): Response {
-        return ResponseUtils.ok(StreamingOutput { output -> sumehrLogic.createSumehr(output!!, patientLogic.getPatient(patientId), info.secretForeignKeys, healthcarePartyLogic.getHealthcareParty(sessionLogic.currentSessionContext.user.healthcarePartyId), mapper!!.map<HealthcarePartyDto, HealthcareParty>(info.recipient, HealthcareParty::class.java), language, info.comment, null) })
+    fun generateSumehr(@PathParam("patientId") patientId: String, @QueryParam("language") language: String, @QueryParam("jsonFormat") jsonFormat: Boolean, info: SumehrExportInfoDto): Response {
+        return ResponseUtils.ok(StreamingOutput { output -> sumehrLogic.createSumehr(output!!, patientLogic.getPatient(patientId), info.secretForeignKeys, healthcarePartyLogic.getHealthcareParty(sessionLogic.currentSessionContext.user.healthcarePartyId), mapper!!.map<HealthcarePartyDto, HealthcareParty>(info.recipient, HealthcareParty::class.java), language, info.comment, null, jsonFormat) })
     }
 
 	@ApiOperation(value = "Generate sumehr", httpMethod = "POST", notes = "")

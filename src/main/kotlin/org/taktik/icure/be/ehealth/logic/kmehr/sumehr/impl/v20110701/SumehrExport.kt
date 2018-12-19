@@ -21,6 +21,7 @@ package org.taktik.icure.be.ehealth.logic.kmehr.sumehr.impl.v20110701
 
 import org.apache.commons.codec.digest.DigestUtils
 import org.apache.commons.logging.LogFactory
+import org.eclipse.persistence.jaxb.JAXBContextFactory
 import org.taktik.icure.be.ehealth.dto.kmehr.v20110701.be.fgov.ehealth.standards.kmehr.cd.v1.*
 import org.taktik.icure.be.ehealth.dto.kmehr.v20110701.be.fgov.ehealth.standards.kmehr.dt.v1.TextType
 import org.taktik.icure.be.ehealth.dto.kmehr.v20110701.be.fgov.ehealth.standards.kmehr.id.v1.IDKMEHR
@@ -42,6 +43,7 @@ import org.taktik.icure.services.external.rest.v1.dto.embed.ServiceDto
 import org.taktik.icure.services.external.rest.v1.dto.filter.Filters
 import org.taktik.icure.services.external.rest.v1.dto.filter.service.ServiceByHcPartyLabelFilter
 import org.taktik.icure.services.external.rest.v1.dto.filter.service.ServiceByHcPartyTagCodeDateFilter
+import org.eclipse.persistence.jaxb.MarshallerProperties
 import org.taktik.icure.utils.FuzzyValues
 import java.io.OutputStream
 import java.io.OutputStreamWriter
@@ -83,7 +85,8 @@ class SumehrExport : KmehrExport() {
             recipient : HealthcareParty?,
             language : String,
             comment : String?,
-            decryptor : AsyncDecrypt?)  {
+            decryptor : AsyncDecrypt?,
+            jsonFormat : Boolean = false)  {
         val message = initializeMessage(sender)
         message.header.recipients.add(RecipientType().apply {
             hcparties.add(recipient?.let {createParty(it, emptyList())} ?: createParty(emptyList(), listOf(CDHCPARTY().apply { s = CDHCPARTYschemes.CD_APPLICATION; sv = "1.0"}), "gp-software-migration"))
@@ -95,7 +98,14 @@ class SumehrExport : KmehrExport() {
         fillPatientFolder(folder, pat, sfks, sender, null, language, comment, decryptor)
         message.folders.add(folder)
 
-        val jaxbMarshaller = JAXBContext.newInstance(Kmehrmessage::class.java).createMarshaller()
+        val kls = arrayOf(Kmehrmessage::class.java)
+
+        val jaxbMarshaller = JAXBContextFactory.createContext(kls, null).createMarshaller()
+
+        if(jsonFormat){
+            jaxbMarshaller.setProperty(MarshallerProperties.MEDIA_TYPE, "application/json");
+            jaxbMarshaller.setProperty(MarshallerProperties.JSON_INCLUDE_ROOT, true);
+        }
 
         // output pretty printed
         jaxbMarshaller.setProperty(Marshaller.JAXB_FORMATTED_OUTPUT, true)
@@ -455,7 +465,7 @@ class SumehrExport : KmehrExport() {
 
     private fun addGmdmanager(pat: Patient, trn: TransactionType) {
         try {
-            val gmdRelationship = pat.patientHealthCareParties?.find { it.referralPeriods?.any {r -> r.startDate.isBefore(Instant.now()) && null == r.endDate} ?: false }
+            val gmdRelationship = pat.patientHealthCareParties?.find { it.referralPeriods?.any {r -> if (r.startDate == null) false else r.startDate.isBefore(Instant.now()) && null == r.endDate} ?: false }
             if (gmdRelationship != null) {
                 healthcarePartyLogic?.getHealthcareParty(gmdRelationship.healthcarePartyId)?.let {hcp ->
                     val items = getAssessment(trn).headingsAndItemsAndTexts
