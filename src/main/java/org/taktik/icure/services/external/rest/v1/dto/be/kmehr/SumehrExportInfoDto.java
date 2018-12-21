@@ -27,6 +27,7 @@ public class SumehrExportInfoDto implements Serializable {
 	List<String> secretForeignKeys;
 	HealthcarePartyDto recipient;
 	String comment;
+	Boolean jsonFormat;
 
 	public List<String> getSecretForeignKeys() {
 		return secretForeignKeys;
@@ -51,4 +52,8 @@ public class SumehrExportInfoDto implements Serializable {
 	public void setRecipient(HealthcarePartyDto recipient) {
 		this.recipient = recipient;
 	}
+
+	public Boolean getJsonFormat() { return jsonFormat; }
+
+	public void setJsonFormat(Boolean jsonFormat) { this.jsonFormat = jsonFormat; }
 }
