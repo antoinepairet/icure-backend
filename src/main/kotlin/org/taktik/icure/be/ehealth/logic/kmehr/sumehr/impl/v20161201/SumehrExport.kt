@@ -21,6 +21,8 @@ package org.taktik.icure.be.ehealth.logic.kmehr.sumehr.impl.v20161201
 
 import org.apache.commons.codec.digest.DigestUtils
 import org.apache.commons.logging.LogFactory
+import org.eclipse.persistence.jaxb.JAXBContextFactory
+import org.eclipse.persistence.jaxb.MarshallerProperties
 import org.taktik.icure.be.ehealth.dto.kmehr.v20161201.Utils
 import org.taktik.icure.be.ehealth.dto.kmehr.v20161201.be.fgov.ehealth.standards.kmehr.cd.v1.*
 import org.taktik.icure.be.ehealth.dto.kmehr.v20161201.be.fgov.ehealth.standards.kmehr.dt.v1.TextType
@@ -60,7 +62,7 @@ import javax.xml.bind.Marshaller
  * Time: 22:58
  * To change this template use File | Settings | File Templates.
  */
-
+@org.springframework.stereotype.Service
 class SumehrExport : KmehrExport() {
 	override val log = LogFactory.getLog(SumehrExport::class.java)
 
@@ -81,6 +83,7 @@ class SumehrExport : KmehrExport() {
 		language: String,
 		comment: String?,
 		decryptor: AsyncDecrypt?,
+		jsonFormat: Boolean = false,
 		config: Config = Config(_kmehrId = System.currentTimeMillis().toString(),
 		                        date = makeXGC(Instant.now().toEpochMilli())!!,
 		                        time = Utils.makeXGC(Instant.now().toEpochMilli(), true)!!,
@@ -93,13 +96,23 @@ class SumehrExport : KmehrExport() {
 			hcparties.add(recipient?.let { createParty(it, emptyList()) } ?: createParty(emptyList(), listOf(CDHCPARTY().apply { s = CDHCPARTYschemes.CD_APPLICATION; sv = "1.0" }), "gp-software-migration"))
 		})
 
+		// When we generate the JSON, it's to display the confidentiality choices to the user, so we don't want confidentiality here
+		val showConfidential = jsonFormat;
+
 		val folder = FolderType()
 		folder.ids.add(IDKMEHR().apply { s = IDKMEHRschemes.ID_KMEHR; sv = "1.0"; value = 1.toString() })
 		folder.patient = makePerson(pat, config)
-		fillPatientFolder(folder, pat, sfks, sender, null, language, config, comment, decryptor)
+		fillPatientFolder(folder, pat, sfks, sender, null, language, config, comment, decryptor, showConfidential)
 		message.folders.add(folder)
 
-		val jaxbMarshaller = JAXBContext.newInstance(Kmehrmessage::class.java).createMarshaller()
+		val kls = arrayOf(Kmehrmessage::class.java)
+
+		val jaxbMarshaller = JAXBContextFactory.createContext(kls, null).createMarshaller()
+
+		if(jsonFormat){
+			jaxbMarshaller.setProperty(MarshallerProperties.MEDIA_TYPE, "application/json");
+			jaxbMarshaller.setProperty(MarshallerProperties.JSON_INCLUDE_ROOT, true);
+		}
 
 		// output pretty printed
 		jaxbMarshaller.setProperty(Marshaller.JAXB_FORMATTED_OUTPUT, true)
@@ -146,7 +159,7 @@ class SumehrExport : KmehrExport() {
 		val folder = FolderType()
 		folder.ids.add(IDKMEHR().apply { s = IDKMEHRschemes.ID_KMEHR; sv = "1.0"; value = 1.toString() })
 		folder.patient = makePerson(pat, config)
-		fillPatientFolder(folder, pat, sfks, sender, labelsMap, language, config, comment, decryptor)
+		fillPatientFolder(folder, pat, sfks, sender, labelsMap, language, config, comment, decryptor, false)
 		message.folders.add(folder)
 
 		val jaxbMarshaller = JAXBContext.newInstance(Kmehrmessage::class.java).createMarshaller()
@@ -158,7 +171,7 @@ class SumehrExport : KmehrExport() {
 		jaxbMarshaller.marshal(message, OutputStreamWriter(os, "UTF-8"))
 	}
 
-	private fun fillPatientFolder(folder: FolderType, p: Patient, sfks: List<String>, sender: HealthcareParty, extraLabels: Map<Pair<String, String>, List<String>>?, language: String, config: Config, comment: String?, decryptor: AsyncDecrypt?): FolderType {
+	private fun fillPatientFolder(folder: FolderType, p: Patient, sfks: List<String>, sender: HealthcareParty, extraLabels: Map<Pair<String, String>, List<String>>?, language: String, config: Config, comment: String?, decryptor: AsyncDecrypt?, showConfidential: Boolean): FolderType {
 		val trn = TransactionType().apply {
 			cds.add(CDTRANSACTION().apply { s = CDTRANSACTIONschemes.CD_TRANSACTION; sv = "1.0"; value = "sumehr" })
 			author = AuthorType().apply { hcparties.add(createParty(sender, emptyList())) }
@@ -171,26 +184,26 @@ class SumehrExport : KmehrExport() {
 
 		folder.transactions.add(trn)
 
-		addNonPassiveIrrelevantServiceUsingContent(sender.id, sfks, trn, "adr", language, decryptor)
-		addNonPassiveIrrelevantServiceUsingContent(sender.id, sfks, trn, "allergy", language, decryptor)
-		addNonPassiveIrrelevantServiceUsingContent(sender.id, sfks, trn, "socialrisk", language, decryptor)
-		addNonPassiveIrrelevantServiceUsingContent(sender.id, sfks, trn, "risk", language, decryptor)
+		addNonPassiveIrrelevantServiceUsingContent(sender.id, sfks, trn, "adr", language, decryptor, showConfidential)
+		addNonPassiveIrrelevantServiceUsingContent(sender.id, sfks, trn, "allergy", language, decryptor, showConfidential)
+		addNonPassiveIrrelevantServiceUsingContent(sender.id, sfks, trn, "socialrisk", language, decryptor, showConfidential)
+		addNonPassiveIrrelevantServiceUsingContent(sender.id, sfks, trn, "risk", language, decryptor, showConfidential)
 		//itemIndex = addNonPassiveIrrelevantServiceUsingContent(p, trn, itemIndex, "familyrisk");
 
 		addGmdmanager(p, trn)
 		addContactPeople(p, trn, config)
 
-		addNonPassiveIrrelevantServicesAsCD(sender.id, sfks, trn, "patientwill", CDCONTENTschemes.CD_PATIENTWILL, listOf("ntbr", "bloodtransfusionrefusal", "euthanasiarequest", "intubationrefusal"), decryptor)
+		addNonPassiveIrrelevantServicesAsCD(sender.id, sfks, trn, "patientwill", CDCONTENTschemes.CD_PATIENTWILL, listOf("ntbr", "bloodtransfusionrefusal", "euthanasiarequest", "intubationrefusal"), decryptor, showConfidential)
 
-		addVaccines(sender.id, sfks, trn, decryptor)
-		addMedications(sender.id, sfks, trn, decryptor)
+		addVaccines(sender.id, sfks, trn, decryptor, showConfidential)
+		addMedications(sender.id, sfks, trn, decryptor, showConfidential)
 
-		addNonPassiveIrrelevantServiceUsingContent(sender.id, sfks, trn, "healthissue", language, decryptor, false, "healthcareelement")
-		addNonPassiveIrrelevantServiceUsingContent(sender.id, sfks, trn, "healthcareelement", language, decryptor)
+		addNonPassiveIrrelevantServiceUsingContent(sender.id, sfks, trn, "healthissue", language, decryptor, showConfidential, false, "healthcareelement")
+		addNonPassiveIrrelevantServiceUsingContent(sender.id, sfks, trn, "healthcareelement", language, decryptor, showConfidential)
 
-		addHealthCareElements(sender.id, sfks, trn)
+		addHealthCareElements(sender.id, sfks, trn, showConfidential)
 
-		extraLabels?.let { addServiceUsingContent(sender.id, sfks, trn, extraLabels, language, decryptor, false, "labresult") }
+		extraLabels?.let { addServiceUsingContent(sender.id, sfks, trn, extraLabels, language, decryptor, showConfidential, false, "labresult") }
 
 		if (comment?.length ?: 0 > 0) {
 			trn.headingsAndItemsAndTexts.add(TextType().apply { l = sender.languages.firstOrNull() ?: "fr"; value = comment })
@@ -327,10 +340,16 @@ class SumehrExport : KmehrExport() {
 		return history as HeadingType
 	}
 
-	private fun addNonPassiveIrrelevantServicesAsCD(hcPartyId: String, sfks: List<String>, trn: TransactionType, cdItem: String, type: CDCONTENTschemes, values: List<String>, decryptor: AsyncDecrypt?) {
+	private fun addNonPassiveIrrelevantServicesAsCD(hcPartyId: String, sfks: List<String>, trn: TransactionType, cdItem: String, type: CDCONTENTschemes, values: List<String>, decryptor: AsyncDecrypt?, showConfidential: Boolean) {
 		val assessment = getAssessment(trn)
 
-		val services = getNonConfidentialItems(getNonPassiveIrrelevantServices(hcPartyId, sfks, listOf(cdItem), decryptor))
+		val getFn: () -> List<Service> = {
+			when (showConfidential) {
+				true -> getNonPassiveIrrelevantServices(hcPartyId, sfks, listOf(cdItem), decryptor)
+				false -> getNonConfidentialItems(getNonPassiveIrrelevantServices(hcPartyId, sfks, listOf(cdItem), decryptor))
+			}
+		}
+		val services = getFn()
 		values.forEach { value ->
 			services.filter { s -> null != s.codes.find { it.type == type.value() && value == it.code } }.forEach {
 				createItemWithContent(it, assessment.headingsAndItemsAndTexts.size + 1, cdItem, listOf(ContentType().apply { cds.add(CDCONTENT().apply { s = type; sv = "1.0"; this.value = value }) }))?.let {
@@ -340,9 +359,15 @@ class SumehrExport : KmehrExport() {
 		}
 	}
 
-	private fun addNonPassiveIrrelevantServiceUsingContent(hcPartyId: String, sfks: List<String>, trn: TransactionType, cdItem: String, language: String, decryptor: AsyncDecrypt?, forcePassive: Boolean = false, forceCdItem: String? = null) {
+	private fun addNonPassiveIrrelevantServiceUsingContent(hcPartyId: String, sfks: List<String>, trn: TransactionType, cdItem: String, language: String, decryptor: AsyncDecrypt?, showConfidential: Boolean, forcePassive: Boolean = false, forceCdItem: String? = null) {
 		try {
-			val svcs = getNonConfidentialItems(getNonPassiveIrrelevantServices(hcPartyId, sfks, listOf(cdItem), decryptor))
+			val getFn: () -> List<Service> = {
+				when (showConfidential) {
+					true -> getNonPassiveIrrelevantServices(hcPartyId, sfks, listOf(cdItem), decryptor)
+					false -> getNonConfidentialItems(getNonPassiveIrrelevantServices(hcPartyId, sfks, listOf(cdItem), decryptor))
+				}
+			}
+			val svcs = getFn()
 			if (svcs.isEmpty()) {
 				log.debug("_writeItems : no services found with cd-item " + cdItem)
 			} else {
@@ -374,9 +399,15 @@ class SumehrExport : KmehrExport() {
 		}
 	}
 
-	private fun addServiceUsingContent(hcPartyId: String, sfks: List<String>, trn: TransactionType, labels: Map<Pair<String, String>, List<String>>, language: String, decryptor: AsyncDecrypt?, forcePassive: Boolean = false, forceCdItem: String? = null) {
+	private fun addServiceUsingContent(hcPartyId: String, sfks: List<String>, trn: TransactionType, labels: Map<Pair<String, String>, List<String>>, language: String, decryptor: AsyncDecrypt?, showConfidential: Boolean, forcePassive: Boolean = false, forceCdItem: String? = null) {
 		try {
-			val svcs = getNonConfidentialItems(getNonPassiveIrrelevantServicesWithLabels(hcPartyId, sfks, labels.values.flatten(), decryptor))
+			val getFn: () -> List<Service> = {
+				when (showConfidential) {
+					true -> getNonPassiveIrrelevantServicesWithLabels(hcPartyId, sfks, labels.values.flatten(), decryptor)
+					false -> getNonConfidentialItems(getNonPassiveIrrelevantServicesWithLabels(hcPartyId, sfks, labels.values.flatten(), decryptor))
+				}
+			}
+			val svcs = getFn()
 			if (svcs.isEmpty()) {
 				log.debug("_writeItems : no services found with labels: " + labels)
 			} else {
@@ -489,9 +520,15 @@ class SumehrExport : KmehrExport() {
 		}
 	}
 
-	private fun addMedications(hcPartyId: String, sfks: List<String>, trn: TransactionType, decryptor: AsyncDecrypt?) {
+	private fun addMedications(hcPartyId: String, sfks: List<String>, trn: TransactionType, decryptor: AsyncDecrypt?, showConfidential: Boolean) {
 		try {
-			val medications = getNonConfidentialItems(getMedications(hcPartyId, sfks, decryptor))
+			val getFn: () -> List<Service> = {
+				when (showConfidential) {
+					true -> getMedications(hcPartyId, sfks, decryptor)
+					false -> getNonConfidentialItems(getMedications(hcPartyId, sfks, decryptor))
+				}
+			}
+			val medications = getFn()
 			medications.forEach { m ->
 				if (null == m.closingDate) {
 					m.closingDate = FuzzyValues.getFuzzyDate(LocalDateTime.now().plusMonths(1), ChronoUnit.SECONDS)
@@ -524,9 +561,15 @@ class SumehrExport : KmehrExport() {
 		}
 	}
 
-	private fun addVaccines(hcPartyId: String, sfks: List<String>, trn: TransactionType, decryptor: AsyncDecrypt?) {
+	private fun addVaccines(hcPartyId: String, sfks: List<String>, trn: TransactionType, decryptor: AsyncDecrypt?, showConfidential: Boolean) {
 		try {
-			getNonConfidentialItems(getVaccines(hcPartyId, sfks, decryptor)).forEach {
+			val getFn: () -> List<Service> = {
+				when (showConfidential) {
+					true -> getVaccines(hcPartyId, sfks, decryptor)
+					false -> getNonConfidentialItems(getVaccines(hcPartyId, sfks, decryptor))
+				}
+			}
+			getFn().forEach {
 				val items = getAssessment(trn).headingsAndItemsAndTexts
 				items.add(createVaccineItem(it, items.size + 1))
 			}
@@ -535,8 +578,14 @@ class SumehrExport : KmehrExport() {
 		}
 	}
 
-	private fun addHealthCareElements(hcPartyId: String, sfks: List<String>, trn: TransactionType) {
-		for (healthElement in getNonConfidentialItems(getHealthElements(hcPartyId, sfks))) {
+	private fun addHealthCareElements(hcPartyId: String, sfks: List<String>, trn: TransactionType, showConfidential: Boolean) {
+		val getFn: () -> List<HealthElement> = {
+			when (showConfidential) {
+				true -> getHealthElements(hcPartyId, sfks)
+				false -> getNonConfidentialItems(getHealthElements(hcPartyId, sfks))
+			}
+		}
+		for (healthElement in getFn()) {
 			addHealthCareElement(trn, healthElement)
 		}
 	}

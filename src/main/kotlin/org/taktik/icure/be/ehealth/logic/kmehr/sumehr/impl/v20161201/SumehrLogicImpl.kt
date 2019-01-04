@@ -41,7 +41,7 @@ import org.taktik.icure.services.external.api.AsyncDecrypt
 import org.xml.sax.SAXException
 import java.io.InputStream
 import java.util.*
-
+@org.springframework.stereotype.Service
 class SumehrLogicImpl(private val contactLogic: ContactLogic, private val sumehrExport: SumehrExport) : SumehrLogic {
 
     override fun isSumehrValid(hcPartyId: String, patient: Patient, patientSecretForeignKeys: List<String>): SumehrStatus {
@@ -62,7 +62,7 @@ class SumehrLogicImpl(private val contactLogic: ContactLogic, private val sumehr
         TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
     }
 
-    override fun createSumehr(os: OutputStream, pat: Patient, sfks: List<String>, sender: HealthcareParty, recipient: HealthcareParty, language: String, comment: String, decryptor: AsyncDecrypt?, jsonFormat: Boolean) = sumehrExport.createSumehr(os, pat, sfks, sender, recipient, language, comment, decryptor)
+    override fun createSumehr(os: OutputStream, pat: Patient, sfks: List<String>, sender: HealthcareParty, recipient: HealthcareParty, language: String, comment: String, decryptor: AsyncDecrypt?, jsonFormat: Boolean) = sumehrExport.createSumehr(os, pat, sfks, sender, recipient, language, comment, decryptor, jsonFormat)
 
 	override fun createSumehrPlusPlus(os: OutputStream, pat: Patient, sfks: List<String>, sender: HealthcareParty, recipient: HealthcareParty, language: String, comment: String, decryptor: AsyncDecrypt?) = sumehrExport.createSumehrPlusPlus(os, pat, sfks, sender, recipient, language, comment, decryptor)
 

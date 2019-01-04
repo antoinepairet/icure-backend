@@ -62,7 +62,7 @@ import javax.xml.bind.Marshaller
  * Time: 22:58
  * To change this template use File | Settings | File Templates.
  */
-@org.springframework.stereotype.Service
+
 class SumehrExport : KmehrExport() {
     override val log = LogFactory.getLog(SumehrExport::class.java)
 
