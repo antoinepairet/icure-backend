@@ -188,6 +188,11 @@ class SumehrExport : KmehrExport() {
 		addNonPassiveIrrelevantServiceUsingContent(sender.id, sfks, trn, "allergy", language, decryptor, showConfidential)
 		addNonPassiveIrrelevantServiceUsingContent(sender.id, sfks, trn, "socialrisk", language, decryptor, showConfidential)
 		addNonPassiveIrrelevantServiceUsingContent(sender.id, sfks, trn, "risk", language, decryptor, showConfidential)
+
+		addNonPassiveIrrelevantHealthElementUsingContent(sender.id, sfks, trn, "adr", language, decryptor, showConfidential)
+		addNonPassiveIrrelevantHealthElementUsingContent(sender.id, sfks, trn, "allergy", language, decryptor, showConfidential)
+		addNonPassiveIrrelevantHealthElementUsingContent(sender.id, sfks, trn, "socialrisk", language, decryptor, showConfidential)
+		addNonPassiveIrrelevantHealthElementUsingContent(sender.id, sfks, trn, "risk", language, decryptor, showConfidential)
 		//itemIndex = addNonPassiveIrrelevantServiceUsingContent(p, trn, itemIndex, "familyrisk");
 
 		addGmdmanager(p, trn)
@@ -356,6 +361,40 @@ class SumehrExport : KmehrExport() {
 					assessment.headingsAndItemsAndTexts.add(it)
 				}
 			}
+		}
+	}
+
+	private fun addNonPassiveIrrelevantHealthElementUsingContent(hcPartyId: String, sfks: List<String>, trn: TransactionType, cdItem: String, language: String, decryptor: AsyncDecrypt?, showConfidential: Boolean, forcePassive: Boolean = false, forceCdItem: String? = null) {
+		try {
+			val getFn: () -> List<HealthElement> = {
+				when (showConfidential) {
+					true -> getHealthElements(hcPartyId, sfks)
+					false -> getNonConfidentialItems(getHealthElements(hcPartyId, sfks))
+				}
+			}
+			val rawSvcs = getFn()
+			val svcs = rawSvcs.filter { he ->
+				val code = he.tags.find { tag ->
+					tag.code == (forceCdItem ?: cdItem)
+				}
+				code != null
+			}
+			if (svcs.isEmpty()) {
+
+			} else {
+				svcs.forEach { svc ->
+					val items = if (!((svc.tags.any { it.type == "CD-LIFECYCLE" && it.code == "inactive" } || ((svc.status ?: 0) and 1) != 0) && !forcePassive)) {
+						getAssessment(trn).headingsAndItemsAndTexts
+					} else {
+						getHistory(trn).headingsAndItemsAndTexts
+					}
+					createItemWithContent(svc, items.size + 1, forceCdItem ?: cdItem, listOf(makeContent("fr", Content(svc.descr))).filterNotNull())?.let {
+						items.add(it)
+					}
+				}
+			}
+		} catch (e: RuntimeException) {
+			log.error("Unexpected error", e)
 		}
 	}
 
