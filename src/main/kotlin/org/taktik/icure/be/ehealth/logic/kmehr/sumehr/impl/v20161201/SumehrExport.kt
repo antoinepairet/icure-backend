@@ -301,7 +301,7 @@ class SumehrExport : KmehrExport() {
 
 	fun getHealthElements(hcPartyId: String, sfks: List<String>): List<HealthElement> {
 		return healthElementLogic?.findByHCPartySecretPatientKeys(hcPartyId, sfks)?.filter {
-			!(it.descr.matches("INBOX|Etat g\\u00e9n\\u00e9ral.*".toRegex()) || ((it.status ?: 0) and 2 != 0 && it.closingDate != null))
+			(!(it.descr.matches("INBOX|Etat g\\u00e9n\\u00e9ral.*".toRegex()) || ((it.status ?: 0) and 2 != 0 && it.closingDate != null)))
 		} ?: emptyList()
 	}
 
@@ -620,7 +620,12 @@ class SumehrExport : KmehrExport() {
 	private fun addHealthCareElements(hcPartyId: String, sfks: List<String>, trn: TransactionType, showConfidential: Boolean) {
 		val getFn: () -> List<HealthElement> = {
 			when (showConfidential) {
-				true -> getHealthElements(hcPartyId, sfks)
+				true -> getHealthElements(hcPartyId, sfks).filter {
+					val tag = it.tags.find { t ->
+						t.code == "healthcareelement"
+					}
+					tag != null
+				}
 				false -> getNonConfidentialItems(getHealthElements(hcPartyId, sfks))
 			}
 		}
