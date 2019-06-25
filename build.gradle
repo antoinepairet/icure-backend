@@ -211,6 +211,8 @@ dependencies {
 	compile group: 'com.ibm.icu', name: 'icu4j', version: '57.1'
 	compile name: 'probatron4j-custom-0.7.4'
 	compile name: 'ehvalidator-service-core-3.0.0'
+    compile name: 'schematron-core-1.1.0.jar'
+    compile name: 'commons-lang-2.6.jar'
 
     // mustache
     compile group: 'com.github.spullara.mustache.java', name: 'compiler', version: '0.9.5'
