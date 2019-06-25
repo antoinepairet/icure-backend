@@ -98,7 +98,6 @@ open class KmehrExport {
 
             firstname = m.firstName
             familyname = m.lastName
-            name = m.name
             addresses.addAll(makeAddresses(m.addresses))
             telecoms.addAll(makeTelecoms(m.addresses))
         }
