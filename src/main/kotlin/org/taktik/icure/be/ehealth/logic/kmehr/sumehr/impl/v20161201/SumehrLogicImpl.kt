@@ -27,6 +27,7 @@ import java.io.OutputStream
 import java.io.OutputStreamWriter
 
 import be.fgov.ehealth.ehvalidator.core.EhValidator
+import be.fgov.ehealth.ehvalidator.exceptions.EhValidatorXmlValidationException
 import org.springframework.beans.factory.annotation.Qualifier
 import org.taktik.icure.be.ehealth.dto.SumehrStatus
 import org.taktik.icure.be.ehealth.logic.kmehr.sumehr.SumehrLogic
@@ -91,6 +92,8 @@ class SumehrLogicImpl(val contactLogic: ContactLogic, @Qualifier("sumehrExportV2
             w.write(html)
             w.close()
         } catch (e: SAXException) {
+            throw IOException(e)
+        } catch (e: EhValidatorXmlValidationException) {
             throw IOException(e)
         }
 
