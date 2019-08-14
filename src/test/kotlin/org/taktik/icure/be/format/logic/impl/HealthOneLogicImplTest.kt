@@ -727,7 +727,7 @@ class HealthOneLogicImplTest {
 
         // Fourth parameter
         val full = true
-
+blabla
         // Executions
         val res1 = HealthOneLogicImpl.extractResultInfos(bufferedreader1, language, docID, full)
         val res2 = HealthOneLogicImpl.extractResultInfos(bufferedreader2, language, docID, full)
