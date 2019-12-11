@@ -5,7 +5,6 @@ import org.taktik.icure.be.ehealth.dto.kmehr.v20161201.Utils
 import org.taktik.icure.be.ehealth.dto.kmehr.v20161201.be.fgov.ehealth.standards.kmehr.cd.v1.*
 import org.taktik.icure.be.ehealth.dto.kmehr.v20161201.be.fgov.ehealth.standards.kmehr.schema.v1.*
 import org.taktik.icure.entities.base.Code
-import org.taktik.icure.entities.base.CodeStub
 import org.taktik.icure.entities.embed.Duration
 import org.taktik.icure.entities.embed.RegimenItem
 import org.taktik.icure.utils.FuzzyValues
@@ -24,7 +23,7 @@ object KmehrPrescriptionHelper {
                 Period(ChronoUnit.DAYS, 1)
             } else if (intake.weekday?.weekday?.code != null && intake.weekday?.weekNumber == null && intake.weekday?.weekday?.type == "CD-WEEKDAY") {
                 Period(ChronoUnit.WEEKS, 1)
-                } else inferPeriodFromFrequency(frequency)
+            } else inferPeriodFromFrequency(frequency)
             }
             else -> when (getCommonField(intakes)) {
                 "date" -> getPeriodByDate(intakes)
@@ -40,11 +39,12 @@ object KmehrPrescriptionHelper {
     }
 
     fun inferPeriodFromFrequency(frequency: Code?): Period? {
+        val value = frequency?.data?.toLongOrNull() ?: 1;
         return when (frequency?.code) {
-            "D" -> Period(ChronoUnit.DAYS, 1)
-            "W" -> Period(ChronoUnit.WEEKS, 1)
-            "M" -> Period(ChronoUnit.MONTHS, 1)
-            "J" -> Period(ChronoUnit.YEARS, 1)
+            "d" -> Period(ChronoUnit.DAYS, value)
+            "wk" -> Period(ChronoUnit.WEEKS, value)
+            "mo" -> Period(ChronoUnit.MONTHS, value)
+            "a" -> Period(ChronoUnit.YEARS, value)
             else -> null
         }
     }
@@ -308,7 +308,6 @@ object KmehrPrescriptionHelper {
             return value
         }
     }
-
 
 
 }

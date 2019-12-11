@@ -148,6 +148,7 @@ public class V1MapperFactory {
 				if (source.getId() != null) { c.setId(source.getId()); }
 				if (source.getFlags() != null) { c.setFlags(source.getFlags().stream().map(i->mapperFacade.map(i, CodeFlag.class)).collect(Collectors.toSet())); }
 
+				c.setData(source.getData());
 				c.setLinks(source.getLinks());
 				c.setLabel(source.getLabel());
 				c.setLevel(source.getLevel());
