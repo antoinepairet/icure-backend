@@ -289,5 +289,5 @@ publishing {
 }
 
 dockerJava {
-	tag = 'taktik/icure-backend'
+	//tag = 'taktik/icure-backend'
 }
