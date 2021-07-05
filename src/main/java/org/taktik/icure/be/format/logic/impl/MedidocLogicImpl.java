@@ -61,6 +61,7 @@ import org.taktik.icure.entities.embed.Telecom;
 import org.taktik.icure.entities.embed.TelecomType;
 import org.taktik.icure.exceptions.MissingRequirementsException;
 import org.taktik.icure.logic.ContactLogic;
+import org.taktik.icure.services.external.rest.v1.dto.gui.type.Array;
 import org.taktik.icure.utils.FuzzyValues;
 
 @org.springframework.stereotype.Service
@@ -254,6 +255,43 @@ public class MedidocLogicImpl extends GenericResultFormatLogicImpl implements Me
 		fillContactWithLines(ctc, lls, planOfActionId, hcpId, protocolIds, formIds);
 		return contactLogic.modifyContact(ctc);
 	}
+
+	private int fillServices(String language, List<String> lines, int i, Date demandDate){
+        Pattern startSection = Pattern.compile("^#R[bB]*$");
+        Pattern startResult = Pattern.compile("^#R[aA]*$");
+        Pattern title = Pattern.compile("^!.*");
+        Pattern value = Pattern.compile("^=.*");
+        Pattern referenceValue = Pattern.compile("^\\.*");
+        Array<Service> services;
+
+        while(!p3.matcher(lines.get(i)).matches()){
+            if(startSection.matcher(lines.get(i)).matches()){
+                //Section
+                //No size defined
+                String titleValue;
+                while(!p4.matcher(lines.get(i)).matches()){
+                    if(title.matcher(lines.get(i)).matches()){
+
+                    }
+                }
+
+            }else if(startResult.matcher(lines.get(i)).matches()){
+                //Result
+                String type = lines.get(i);
+                i++;
+                String result = lines.get(i);
+                i++;
+                String sss;
+                i++;
+                String flag = lines.get(i);
+                i++;
+                String norm = lines.get(i);
+                i++;
+            }
+        }
+
+        return i;
+    }
 
 	private int fillService(Service s, String language, List<String> lines, int i, Date demandDate) {
 		do {
